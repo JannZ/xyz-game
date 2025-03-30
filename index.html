@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jogo de Sequência XYZ</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        #gameContainer {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 400px;
+        }
+
+        #sequence {
+            font-size: 40px;
+            letter-spacing: 10px;
+            margin: 20px 0;
+            padding: 10px;
+            background: #eee;
+            border-radius: 5px;
+            min-height: 60px;
+        }
+
+        #progressContainer {
+            width: 100%;
+            height: 5px;
+            background: #ddd;
+            margin: 10px 0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        #progressBar {
+            width: 100%;
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.05s linear;
+        }
+
+        #instructions {
+            margin: 20px 0;
+            color: #666;
+        }
+
+        #score {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+
+        .feedback {
+            font-size: 24px;
+            margin-top: 10px;
+            height: 30px;
+        }
+
+        .correct { color: green; }
+        .wrong { color: red; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="round">Rodada: 1/10</div>
+        <div id="sequence"></div>
+        <div id="progressContainer">
+            <div id="progressBar"></div>
+        </div>
+        <div id="instructions">
+            A última letra é igual à primeira?<br>
+            ← Não (Seta Esquerda) | Sim (Seta Direita) →
+        </div>
+        <div id="feedback" class="feedback"></div>
+        <div id="score">Pontuação: 0</div>
+    </div>
+
+    <script>
+        let sequence = [];
+        let currentRound = 1;
+        let score = 0;
+        let canAnswer = false;
+        let isFirstRound = true;
+        let timerInterval;
+        let startTime;
+
+        function generateSequence() {
+            sequence = Array.from({length: 3}, () => 
+                ['X', 'Y', 'Z'][Math.floor(Math.random() * 3)]
+            );
+        }
+
+        function updateDisplay(showFull = false) {
+            const seqDisplay = showFull ? 
+                sequence.join(' ') : 
+                `? ? ${sequence[2]}`;
+            
+            document.getElementById('sequence').textContent = seqDisplay;
+            document.getElementById('round').textContent = `Rodada: ${currentRound}/10`;
+            document.getElementById('score').textContent = `Pontuação: ${score}`;
+        }
+
+        function updateProgressBar(percentage) {
+            document.getElementById('progressBar').style.width = percentage + '%';
+        }
+
+        function showFeedback(isCorrect) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = isCorrect ? '✓ Correto!' : '✗ Errado!';
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'wrong'}`;
+            
+            setTimeout(() => {
+                feedback.textContent = '';
+                feedback.className = 'feedback';
+            }, 1000);
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            updateProgressBar(100);
+            
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const remaining = 3000 - elapsed;
+                
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeout();
+                } else {
+                    updateProgressBar((remaining / 3000) * 100);
+                }
+            }, 50);
+        }
+
+        function handleTimeout() {
+            canAnswer = false;
+            updateProgressBar(0);
+            showFeedback(false);
+            resetGame();
+        }
+
+        function resetGame() {
+            currentRound = 1;
+            isFirstRound = true;
+            generateSequence();
+            setTimeout(() => startNewGame(), 1000);
+        }
+
+        function startNewGame() {
+            canAnswer = false;
+            clearInterval(timerInterval);
+            
+            if (isFirstRound) {
+                updateDisplay(true);
+                
+                setTimeout(() => {
+                    updateDisplay();
+                    canAnswer = true;
+                    isFirstRound = false;
+                    startTimer();
+                }, 5000);
+            } else {
+                updateDisplay();
+                canAnswer = true;
+                startTimer();
+            }
+        }
+
+        function checkAnswer(userAnswer) {
+            if (!canAnswer) return;
+
+            clearInterval(timerInterval);
+            updateProgressBar(0);
+            canAnswer = false;
+
+            const correctAnswer = sequence[0] === sequence[2];
+            const isCorrect = (userAnswer === 'yes' && correctAnswer) || 
+                            (userAnswer === 'no' && !correctAnswer);
+
+            showFeedback(isCorrect);
+
+            if (isCorrect) {
+                if (currentRound === 10) {
+                    score++;
+                    resetGame();
+                } else {
+                    sequence = [...sequence.slice(1), 
+                               ['X', 'Y', 'Z'][Math.floor(Math.random() * 3)]];
+                    currentRound++;
+                    setTimeout(() => startNewGame(), 1000);
+                }
+            } else {
+                resetGame();
+            }
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') checkAnswer('no');
+            if (event.key === 'ArrowRight') checkAnswer('yes');
+        });
+
+        generateSequence();
+        startNewGame();
+    </script>
+</body>
+</html>
